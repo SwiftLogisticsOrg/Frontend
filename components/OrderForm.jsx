@@ -1,15 +1,16 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/lib/apiClient';
-import { Plus, Trash2, MapPin, Phone } from 'lucide-react';
+import { Phone, ShoppingBag, Package, ArrowLeft } from 'lucide-react';
+import AddressSelector from './AddressSelector';
 
 export default function OrderForm() {
   const [formData, setFormData] = useState({
     pickupAddress: '',
     deliveryAddress: '',
-    items: [{ name: '', quantity: 1 }],
+    selectedItems: [], // Will be loaded from localStorage
     contactPhone: ''
   });
   const [loading, setLoading] = useState(false);
@@ -18,6 +19,25 @@ export default function OrderForm() {
   const { user, token } = useAuth();
   const router = useRouter();
 
+  // Load selected items from localStorage on component mount
+  useEffect(() => {
+    const storedItems = localStorage.getItem('selectedItems');
+    if (storedItems) {
+      try {
+        const parsedItems = JSON.parse(storedItems);
+        setFormData(prev => ({
+          ...prev,
+          selectedItems: parsedItems
+        }));
+      } catch (err) {
+        console.error('Error parsing stored items:', err);
+      }
+    } else {
+      // If no items selected, redirect to item selection page
+      router.push('/select-items');
+    }
+  }, [router]);
+
   const handleChange = (e) => {
     setFormData(prev => ({
       ...prev,
@@ -25,29 +45,16 @@ export default function OrderForm() {
     }));
   };
 
-  const handleItemChange = (index, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.map((item, i) => 
-        i === index ? { ...item, [field]: value } : item
-      )
-    }));
+  const getTotalItems = () => {
+    return formData.selectedItems.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const addItem = () => {
-    setFormData(prev => ({
-      ...prev,
-      items: [...prev.items, { name: '', quantity: 1 }]
-    }));
+  const getTotalPrice = () => {
+    return formData.selectedItems.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
-  const removeItem = (index) => {
-    if (formData.items.length > 1) {
-      setFormData(prev => ({
-        ...prev,
-        items: prev.items.filter((_, i) => i !== index)
-      }));
-    }
+  const goBackToItemSelection = () => {
+    router.push('/select-items');
   };
 
   const handleSubmit = async (e) => {
@@ -55,8 +62,30 @@ export default function OrderForm() {
     setLoading(true);
     setError('');
 
+    if (formData.selectedItems.length === 0) {
+      setError('Please select at least one item');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const order = await apiClient.createOrder(formData, token);
+      // Transform selectedItems to the format expected by the API
+      const orderData = {
+        ...formData,
+        items: formData.selectedItems.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          itemId: item.itemId,
+          shopId: item.shopId,
+          price: item.price
+        }))
+      };
+      
+      const order = await apiClient.createOrder(orderData, token);
+      
+      // Clear selected items from localStorage after successful order creation
+      localStorage.removeItem('selectedItems');
+      
       router.push(`/orders/${order.id}`);
     } catch (err) {
       setError(err.message || 'Failed to create order');
@@ -75,36 +104,26 @@ export default function OrderForm() {
             <label className="block text-sm font-medium text-black mb-2">
               Pickup Address
             </label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                name="pickupAddress"
-                value={formData.pickupAddress}
-                onChange={handleChange}
-                required
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                placeholder="Enter pickup address"
-              />
-            </div>
+            <AddressSelector
+              name="pickupAddress"
+              value={formData.pickupAddress}
+              onChange={handleChange}
+              placeholder="Enter pickup address"
+              required
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-black mb-2">
               Delivery Address
             </label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                name="deliveryAddress"
-                value={formData.deliveryAddress}
-                onChange={handleChange}
-                required
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                placeholder="Enter delivery address"
-              />
-            </div>
+            <AddressSelector
+              name="deliveryAddress"
+              value={formData.deliveryAddress}
+              onChange={handleChange}
+              placeholder="Enter delivery address"
+              required
+            />
           </div>
 
           <div>
@@ -126,55 +145,79 @@ export default function OrderForm() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4">
               <label className="block text-sm font-medium text-black">
-                Items to Deliver
+                Selected Items
               </label>
               <button
                 type="button"
-                onClick={addItem}
-                className="flex items-center space-x-1 text-black hover:text-gray-700 transition-colors"
+                onClick={goBackToItemSelection}
+                className="flex items-center space-x-2 text-black hover:text-gray-700 transition-colors text-sm"
               >
-                <Plus className="h-4 w-4" />
-                <span className="text-sm">Add Item</span>
+                <ArrowLeft className="h-4 w-4" />
+                <span>Change Items</span>
               </button>
             </div>
 
-            <div className="space-y-3">
-              {formData.items.map((item, index) => (
-                <div key={index} className="flex gap-3 items-end">
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={item.name}
-                      onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                      placeholder="Item description"
-                    />
+            {formData.selectedItems.length > 0 ? (
+              <div className="space-y-3">
+                {/* Summary */}
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <ShoppingBag className="h-5 w-5 text-gray-600" />
+                      <span className="font-medium text-black">
+                        {getTotalItems()} items selected
+                      </span>
+                    </div>
+                    <div className="text-lg font-bold text-black">
+                      ${getTotalPrice().toFixed(2)}
+                    </div>
                   </div>
-                  <div className="w-20">
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
-                      required
-                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-center"
-                    />
-                  </div>
-                  {formData.items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      className="p-3 text-red-500 hover:text-red-700 transition-colors"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  )}
                 </div>
-              ))}
-            </div>
+
+                {/* Items List */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  {formData.selectedItems.map((item, index) => (
+                    <div 
+                      key={item.itemId} 
+                      className={`p-4 flex items-center justify-between ${
+                        index !== formData.selectedItems.length - 1 ? 'border-b border-gray-200' : ''
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Package className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <h4 className="font-medium text-black">{item.name}</h4>
+                          <p className="text-sm text-gray-500">{item.category}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium text-black">Qty: {item.quantity}</div>
+                        {item.price > 0 && (
+                          <div className="text-sm text-gray-500">
+                            ${item.price} each
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 border border-gray-200 rounded-lg">
+                <ShoppingBag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-black mb-2">No items selected</h3>
+                <p className="text-gray-500 mb-4">Please select items to deliver</p>
+                <button
+                  type="button"
+                  onClick={goBackToItemSelection}
+                  className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  Select Items
+                </button>
+              </div>
+            )}
           </div>
 
           {error && (

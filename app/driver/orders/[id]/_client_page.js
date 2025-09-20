@@ -6,7 +6,8 @@ import { useSocketContext } from '@/components/SocketProvider';
 import { apiClient } from '@/lib/apiClient';
 import Header from '@/components/Header';
 import StatusTimeline from '@/components/StatusTimeline';
-import DriverStatusControls from '@/components/DriverStatusControls';
+import DriverStatusControls from '@/components/DriverStatusControl';
+import OrderMap from '@/components/OrderMap';
 import { ArrowLeft, MapPin, Phone, Package, Clock } from 'lucide-react';
 
 export default function DriverOrderDetailClientPage({ params }) {
@@ -43,8 +44,43 @@ export default function DriverOrderDetailClientPage({ params }) {
   const fetchOrder = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/orders/${params.id}`);
-      setOrder(response.data);
+      const response = await apiClient.getOrderById(params.id);
+
+      // Get customer details
+      let customer = null;
+      if (response.clientId) {
+        try {
+          const customerData = await apiClient.getUserById(response.clientId);
+          customer = {
+            name: customerData?.name || 'Customer',
+            phone: response.contactPhone
+          };
+        } catch (err) {
+          console.error('Error fetching customer details:', err);
+          customer = {
+            name: 'Customer',
+            phone: response.contactPhone
+          };
+        }
+      }
+
+      // Transform the API response to match expected structure
+      const transformedOrder = {
+        ...response,
+        orderNumber: response.id,
+        customer,
+        status: response.status || 'created', // Ensure status has a default value
+        total: response.items?.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0) || 0,
+        estimatedDelivery: response.eta ? new Date(response.eta).toLocaleString() : 'TBD',
+        deliveryAddress: {
+          street: response.deliveryAddress || '',
+          city: '',
+          state: '',
+          zipCode: ''
+        }
+      };
+
+      setOrder(transformedOrder);
     } catch (err) {
       setError('Failed to load order details');
       console.error('Error fetching order:', err);
@@ -53,13 +89,19 @@ export default function DriverOrderDetailClientPage({ params }) {
     }
   };
 
-  const handleStatusUpdate = async (newStatus) => {
+  const handleStatusUpdate = async ({ status: newStatus }) => {
     try {
-      const response = await apiClient.patch(`/orders/${order.id}/status`, {
+      // Update order status via API
+      await apiClient.updateOrderStatus(user.id, order.id, newStatus);
+
+      // Update local state to reflect the change
+      setOrder(prevOrder => ({
+        ...prevOrder,
         status: newStatus,
-        driverId: user.id
-      });
-      setOrder(response.data);
+        updatedAt: new Date().toISOString()
+      }));
+
+      console.log(`Status updated to ${newStatus} for order ${order.id}`);
     } catch (err) {
       console.error('Error updating order status:', err);
     }
@@ -92,8 +134,8 @@ export default function DriverOrderDetailClientPage({ params }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
-      <div className="max-w-md mx-auto pt-20 px-4 pb-6">
+
+      <div className="max-w-2xl mx-auto pt-20 px-4 pb-6">
         {/* Back Button */}
         <button
           onClick={() => router.back()}
@@ -114,13 +156,12 @@ export default function DriverOrderDetailClientPage({ params }) {
                 {new Date(order.createdAt).toLocaleDateString()}
               </p>
             </div>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${order.status === 'delivered' ? 'bg-green-100 text-green-800' :
               order.status === 'in_transit' ? 'bg-blue-100 text-blue-800' :
-              order.status === 'picked_up' ? 'bg-yellow-100 text-yellow-800' :
-              'bg-gray-100 text-gray-800'
-            }`}>
-              {order.status.replace('_', ' ').toUpperCase()}
+                order.status === 'picked_up' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+              }`}>
+              {order.status ? order.status.replace('_', ' ').toUpperCase() : 'UNKNOWN'}
             </span>
           </div>
 
@@ -156,14 +197,23 @@ export default function DriverOrderDetailClientPage({ params }) {
           </div>
         </div>
 
+        {/* Map */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+          <h2 className="font-medium text-gray-900 mb-3">Route Map</h2>
+          <OrderMap order={order} />
+        </div>
+
         {/* Status Timeline */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
           <h2 className="font-medium text-gray-900 mb-3">Status Timeline</h2>
-          <StatusTimeline order={order} />
+          <StatusTimeline 
+            currentStatus={order.status} 
+            updatedAt={order.updatedAt}
+          />
         </div>
 
         {/* Driver Controls */}
-        <DriverStatusControls 
+        <DriverStatusControls
           order={order}
           onStatusUpdate={handleStatusUpdate}
         />

@@ -69,11 +69,6 @@ export default function StatusTimeline({ currentStatus, updatedAt }) {
                 )}
               </div>
 
-              {index < statusSteps.length - 1 && (
-                <div className={`absolute left-7 mt-10 w-0.5 h-8 transition-colors duration-300 ${
-                  isCompleted ? 'bg-green-300' : 'bg-gray-200'
-                }`} />
-              )}
             </div>
           );
         })}

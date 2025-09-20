@@ -20,50 +20,46 @@ export const useSocket = () => {
       return;
     }
 
-    // Mock Socket.IO connection - replace with real WS_URL when ready
-    const mockSocket = {
-      connected: true,
-      on: (event, callback) => {
-        // Store listeners for mock event simulation
-        if (!mockSocket._listeners) mockSocket._listeners = {};
-        if (!mockSocket._listeners[event]) mockSocket._listeners[event] = [];
-        mockSocket._listeners[event].push(callback);
-      },
-      emit: (event, data) => {
-        console.log(`[Mock Socket] Emitting ${event}:`, data);
-        // In mock mode, we can simulate immediate responses or delayed responses
-      },
-      off: (event, callback) => {
-        if (mockSocket._listeners && mockSocket._listeners[event]) {
-          mockSocket._listeners[event] = mockSocket._listeners[event].filter(cb => cb !== callback);
-        }
-      },
-      disconnect: () => {
-        mockSocket.connected = false;
-        setConnected(false);
-      },
-      // Utility for simulating incoming events (dev/demo use)
-      simulateEvent: (event, data) => {
-        if (mockSocket._listeners && mockSocket._listeners[event]) {
-          mockSocket._listeners[event].forEach(callback => callback(data));
-        }
-      }
-    };
+    // Create Socket.IO connection
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+    
+    const socketInstance = io(wsUrl, {
+      auth: { token },
+      autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      timeout: 20000
+    });
 
-    // TODO: Replace mock with real Socket.IO connection
-    // const realSocket = io(process.env.NEXT_PUBLIC_WS_URL, {
-    //   auth: { token }
-    // });
-    // realSocket.on('connect', () => setConnected(true));
-    // realSocket.on('disconnect', () => setConnected(false));
+    // Connection event handlers
+    socketInstance.on('connect', () => {
+      console.log('Socket connected:', socketInstance.id);
+      setConnected(true);
+    });
 
-    socketRef.current = mockSocket;
-    setSocket(mockSocket);
-    setConnected(true);
+    socketInstance.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      setConnected(false);
+    });
+
+    socketInstance.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      setConnected(false);
+    });
+
+    // Handle welcome message
+    socketInstance.on('connected', (data) => {
+      console.log('Socket welcome message:', data);
+    });
+
+    socketRef.current = socketInstance;
+    setSocket(socketInstance);
 
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
   }, [token, isAuthenticated]);

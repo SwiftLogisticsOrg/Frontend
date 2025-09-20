@@ -1,21 +1,24 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { useSocketContext } from '@/components/SocketProvider';
 import { apiClient } from '@/lib/apiClient';
 import Header from '@/components/Header';
 import DriverOrderCard from '@/components/DriverOrderCard';
+import { useToast } from '@/hooks/use-toast';
 import { Truck, RefreshCw, Bell } from 'lucide-react';
 
 export default function DriverDashboard() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [notification, setNotification] = useState('');
 
   const { user, token, isAuthenticated, isDriver } = useAuth();
   const { socket } = useSocketContext();
+  const { addNotification } = useNotifications();
+  const { toast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
@@ -26,7 +29,7 @@ export default function DriverDashboard() {
     }
   }, [isAuthenticated, isDriver, loading, router]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     if (!user || !token) return;
     
     try {
@@ -38,20 +41,36 @@ export default function DriverDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, token]);
 
   useEffect(() => {
     if (user && token && isDriver) {
       fetchOrders();
     }
-  }, [user, token, isDriver]);
+  }, [user, token, isDriver, fetchOrders]);
 
   useEffect(() => {
     if (socket) {
       const handleDriverAssigned = (data) => {
         setOrders(prev => [...prev, data]);
-        setNotification(`New order assigned: #${data.orderId}`);
-        setTimeout(() => setNotification(''), 5000);
+        
+        // Create notification data
+        const notificationData = {
+          title: "🚛 New Order Assigned!",
+          description: `Order #${data.orderId || data.id} has been assigned to you.`,
+          type: 'success',
+          orderId: data.orderId || data.id
+        };
+        
+        // Show toast notification
+        toast({
+          ...notificationData,
+          variant: "default",
+          duration: 5000,
+        });
+        
+        // Add to notification center
+        addNotification(notificationData);
       };
 
       const handleStatusUpdate = (data) => {
@@ -70,27 +89,7 @@ export default function DriverDashboard() {
         socket.off('order.status.updated', handleStatusUpdate);
       };
     }
-  }, [socket]);
-
-  // Dev function to simulate assignment
-  const simulateAssignment = () => {
-    const mockOrder = {
-      id: `ord-${Date.now()}`,
-      orderId: `ord-${Date.now()}`,
-      pickupAddress: '789 Demo St, Test City',
-      deliveryAddress: '321 Sample Ave, Example Town',
-      items: [{ name: 'Sample Package', quantity: 1 }],
-      status: 'assigned',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      eta: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-      contactPhone: '+1234567890'
-    };
-
-    if (socket) {
-      socket.simulateEvent('driver.assigned', mockOrder);
-    }
-  };
+  }, [socket, toast, addNotification]);
 
   if (loading && (!user || !token)) {
     return (
@@ -110,13 +109,6 @@ export default function DriverDashboard() {
   return (
     <div className="min-h-screen bg-black">
       <Header />
-      
-      {notification && (
-        <div className="bg-blue-600 text-white px-6 py-3 flex items-center justify-center space-x-2">
-          <Bell className="h-4 w-4" />
-          <span>{notification}</span>
-        </div>
-      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
@@ -125,15 +117,6 @@ export default function DriverDashboard() {
             <p className="text-gray-300 mt-2">Welcome back, {user?.name}</p>
           </div>
           <div className="flex space-x-3">
-            {process.env.NODE_ENV === 'development' && (
-              <button
-                onClick={simulateAssignment}
-                className="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors text-sm flex items-center space-x-2"
-              >
-                <Bell className="h-4 w-4" />
-                <span>Simulate Assignment (Dev)</span>
-              </button>
-            )}
             <button
               onClick={fetchOrders}
               className="bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition-colors flex items-center space-x-2"
@@ -161,7 +144,7 @@ export default function DriverDashboard() {
               <div className="text-center py-12 bg-white/5 rounded-lg">
                 <Truck className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-white mb-2">No active orders</h3>
-                <p className="text-gray-300">You'll be notified when new orders are assigned to you.</p>
+                <p className="text-gray-300">You&apos;ll be notified when new orders are assigned to you.</p>
               </div>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

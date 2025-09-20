@@ -1,11 +1,13 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { useSocketContext } from '@/components/SocketProvider';
 import { apiClient } from '@/lib/apiClient';
 import StatusTimeline from './StatusTimeline';
-import { MapPin, Phone, Package, Clock, ArrowLeft } from 'lucide-react';
+import { MapPin, Phone, Package, Clock, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 export default function OrderDetail({ orderId }) {
   const [order, setOrder] = useState(null);
@@ -13,9 +15,11 @@ export default function OrderDetail({ orderId }) {
   const [error, setError] = useState('');
   const { token } = useAuth();
   const { socket } = useSocketContext();
+  const { addNotification } = useNotifications();
   const router = useRouter();
+  const { toast } = useToast();
 
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
     try {
       setLoading(true);
       const data = await apiClient.getOrderById(orderId, token);
@@ -29,21 +33,72 @@ export default function OrderDetail({ orderId }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orderId, token]);
 
   useEffect(() => {
     fetchOrder();
-  }, [orderId, token]);
+  }, [fetchOrder]);
 
   useEffect(() => {
     if (socket) {
       const handleStatusUpdate = (data) => {
         if (data.orderId === orderId) {
+          const previousStatus = order?.status;
+          const newStatus = data.status;
+          
           setOrder(prev => prev ? {
             ...prev,
-            status: data.status,
+            status: newStatus,
             updatedAt: new Date().toISOString()
           } : prev);
+
+          // Show toast notification for status changes
+          if (newStatus === 'delivered') {
+            const notificationData = {
+              title: "🎉 Order Delivered!",
+              description: `Order #${orderId} has been successfully delivered.`,
+              type: 'success',
+              orderId: orderId
+            };
+            
+            toast({
+              ...notificationData,
+              variant: "default",
+              duration: 5000,
+            });
+            
+            addNotification(notificationData);
+          } else if (newStatus === 'picked_up') {
+            const notificationData = {
+              title: "📦 Order Picked Up",
+              description: `Order #${orderId} has been picked up and is on the way.`,
+              type: 'info',
+              orderId: orderId
+            };
+            
+            toast({
+              ...notificationData,
+              variant: "default",
+              duration: 3000,
+            });
+            
+            addNotification(notificationData);
+          } else if (newStatus === 'on_way') {
+            const notificationData = {
+              title: "🚚 Driver On The Way",
+              description: `Your driver is on the way to pick up order #${orderId}.`,
+              type: 'info',
+              orderId: orderId
+            };
+            
+            toast({
+              ...notificationData,
+              variant: "default",
+              duration: 3000,
+            });
+            
+            addNotification(notificationData);
+          }
         }
       };
 
@@ -53,25 +108,7 @@ export default function OrderDetail({ orderId }) {
         socket.off('order.status.updated', handleStatusUpdate);
       };
     }
-  }, [socket, orderId]);
-
-  // Dev-only function to simulate status updates
-  const simulateStatusUpdate = () => {
-    if (!order) return;
-    
-    const statuses = ['created', 'assigned', 'accepted', 'on_way', 'arrived_pickup', 'picked_up', 'arrived_delivery', 'delivered'];
-    const currentIndex = statuses.indexOf(order.status);
-    const nextStatus = statuses[currentIndex + 1];
-    
-    if (nextStatus && socket) {
-      const updatedOrder = apiClient.simulateStatusUpdate(orderId, nextStatus);
-      socket.simulateEvent('order.status.updated', {
-        orderId,
-        status: nextStatus,
-        metadata: {}
-      });
-    }
-  };
+  }, [socket, orderId, order?.status, toast, addNotification]);
 
   if (loading) {
     return (
@@ -117,14 +154,6 @@ export default function OrderDetail({ orderId }) {
         </button>
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-white">Order #{order.id}</h1>
-          {process.env.NODE_ENV === 'development' && (
-            <button
-              onClick={simulateStatusUpdate}
-              className="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors text-sm"
-            >
-              Simulate Next Status (Dev)
-            </button>
-          )}
         </div>
       </div>
 

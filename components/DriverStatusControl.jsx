@@ -10,7 +10,9 @@ import {
   Package, 
   Upload, 
   Clock,
-  AlertCircle 
+  AlertCircle,
+  X,
+  AlertTriangle
 } from 'lucide-react';
 
 const statusFlow = [
@@ -46,31 +48,8 @@ export default function DriverStatusControls({ order, onStatusUpdate }) {
     setError('');
 
     try {
-      let result;
-      
-      if (newStatus === 'accepted') {
-        result = await apiClient.acceptOrder(user.id, order.id, token);
-      } else {
-        result = await apiClient.updateOrderStatus(
-          user.id, 
-          order.id, 
-          newStatus, 
-          {},
-          token
-        );
-      }
-
-      // Simulate socket event for real-time updates
-      if (socket) {
-        socket.simulateEvent('order.status.updated', {
-          orderId: order.id,
-          status: newStatus,
-          metadata: {}
-        });
-      }
-
       if (onStatusUpdate) {
-        onStatusUpdate(result);
+        await onStatusUpdate({ status: newStatus });
       }
 
       // Show proof upload for delivered status
@@ -87,7 +66,7 @@ export default function DriverStatusControls({ order, onStatusUpdate }) {
 
   const handleProofUpload = async () => {
     if (!proofUrl.trim()) {
-      setError('Please enter a proof URL');
+      setError('Please upload a proof file');
       return;
     }
 
@@ -157,14 +136,14 @@ export default function DriverStatusControls({ order, onStatusUpdate }) {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-black mb-2">
-              Proof of Delivery URL
+              Proof of Delivery
             </label>
             <div className="flex space-x-3">
               <input
                 type="url"
                 value={proofUrl}
                 onChange={(e) => setProofUrl(e.target.value)}
-                placeholder="https://example.com/proof-image.jpg"
+                placeholder="Click to upload"
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
               />
               <button
@@ -177,7 +156,7 @@ export default function DriverStatusControls({ order, onStatusUpdate }) {
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Enter the URL of the uploaded proof image or document
+              Click to upload your proof image or document
             </p>
           </div>
           
@@ -203,16 +182,66 @@ export default function DriverStatusControls({ order, onStatusUpdate }) {
             </div>
           </div>
 
-          <button
-            onClick={() => handleStatusUpdate(nextStatus)}
-            disabled={loading}
-            className={`w-full ${currentAction.color} text-white py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center space-x-2`}
-          >
-            <currentAction.icon className="h-5 w-5" />
-            <span>
-              {loading ? 'Updating...' : currentAction.label}
-            </span>
-          </button>
+          {order.status === 'assigned' ? (
+            <div className="space-y-2">
+              <button
+                onClick={() => handleStatusUpdate(nextStatus)}
+                disabled={loading}
+                className={`w-full ${currentAction.color} text-white py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center space-x-2`}
+              >
+                <currentAction.icon className="h-5 w-5" />
+                <span>
+                  {loading ? 'Updating...' : currentAction.label}
+                </span>
+              </button>
+
+              <button
+                onClick={() => handleStatusUpdate('rejected')}
+                disabled={loading}
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center space-x-2"
+              >
+                <X className="h-5 w-5" />
+                <span>
+                  {loading ? 'Rejecting...' : 'Reject Order'}
+                </span>
+              </button>
+            </div>
+          ) : order.status === 'arrived_delivery' ? (
+            <div className="space-y-2">
+              <button
+                onClick={() => handleStatusUpdate(nextStatus)}
+                disabled={loading}
+                className={`w-full ${currentAction.color} text-white py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center space-x-2`}
+              >
+                <currentAction.icon className="h-5 w-5" />
+                <span>
+                  {loading ? 'Updating...' : currentAction.label}
+                </span>
+              </button>
+
+              <button
+                onClick={() => handleStatusUpdate('failed')}
+                disabled={loading}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center space-x-2"
+              >
+                <AlertTriangle className="h-5 w-5" />
+                <span>
+                  {loading ? 'Marking Failed...' : 'Mark as Failed'}
+                </span>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => handleStatusUpdate(nextStatus)}
+              disabled={loading}
+              className={`w-full ${currentAction.color} text-white py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center space-x-2`}
+            >
+              <currentAction.icon className="h-5 w-5" />
+              <span>
+                {loading ? 'Updating...' : currentAction.label}
+              </span>
+            </button>
+          )}
 
           {order.status === 'assigned' && (
             <p className="text-sm text-gray-600 text-center">

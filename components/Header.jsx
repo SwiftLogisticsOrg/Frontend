@@ -1,11 +1,14 @@
 'use client';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { useRouter } from 'next/navigation';
-import { Truck, Package, LogOut, User } from 'lucide-react';
+import { Truck, Package, LogOut, User, ShoppingBag, Bell } from 'lucide-react';
+import { useState } from 'react';
 
 export default function Header() {
   const { user, isAuthenticated, isClient, isDriver, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -55,11 +58,11 @@ export default function Header() {
             {isClient && (
               <>
                 <Link
-                  href="/create-order"
+                  href="/select-items"
                   className="text-white hover:text-gray-300 transition-colors flex items-center space-x-1"
                 >
-                  <Package className="h-4 w-4" />
-                  <span>Create Order</span>
+                  <ShoppingBag className="h-4 w-4" />
+                  <span>Shop Items</span>
                 </Link>
                 <Link
                   href="/orders"
@@ -81,6 +84,16 @@ export default function Header() {
             )}
 
             <div className="flex items-center space-x-4">
+              {/* Notification Bell Icon */}
+              <button className="relative text-white hover:text-gray-300 transition-colors p-2">
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              
               <div className="flex items-center space-x-2 text-white">
                 <User className="h-4 w-4" />
                 <span className="text-sm">{user?.name}</span>

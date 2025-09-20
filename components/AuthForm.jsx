@@ -183,14 +183,6 @@ export default function AuthForm({ mode = 'login' }) {
               </p>
             )}
           </div>
-
-          {mode === 'login' && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <p className="text-xs text-gray-500 text-center">
-                Demo credentials: alice@example.com / bob@example.com (any password)
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>

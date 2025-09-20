@@ -1,4 +1,4 @@
-# SwiftTrack - Logistics Demo Frontend
+# SwiftTrack - Logistics Frontend
 
 A modern Next.js frontend for a microservices logistics platform featuring role-based authentication, real-time updates, and elegant black & white design.
 
@@ -17,8 +17,8 @@ A modern Next.js frontend for a microservices logistics platform featuring role-
 - **Frontend**: Next.js 13+ with React functional components
 - **Styling**: Tailwind CSS with custom black & white theme
 - **State Management**: React Context (AuthContext)
-- **Real-time**: Socket.IO client with mock behavior
-- **API Client**: Mock-first approach with easy real API swapping
+- **Real-time**: Socket.IO client with backend integration
+- **API Client**: HTTP-based client for REST API communication
 
 ## Getting Started
 
@@ -31,27 +31,17 @@ npm run dev
 
 ### Environment Variables
 
-Create a `.env.local` file (optional for mock mode):
+Create a `.env.local` file:
 
 ```bash
-# For real API integration (currently using mocks)
+# API Configuration (required)
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
 NEXT_PUBLIC_WS_URL=http://localhost:3001
 ```
 
-### Demo Accounts
+### Setup
 
-The app includes pre-configured demo data:
-
-**Client Account:**
-
-- Email: `alice@example.com` or `charlie@example.com`
-- Password: Any password (mock authentication)
-
-**Driver Account:**
-
-- Email: `bob@example.com` or `dave@example.com`
-- Password: Any password (mock authentication)
+Configure your backend API endpoint in the environment variables. The app is designed to work with a compatible logistics backend API.
 
 ## Usage Guide
 
@@ -97,10 +87,10 @@ The app includes pre-configured demo data:
   AuthContext.js            # Authentication & role management
 
 /hooks
-  useSocket.js              # Socket.IO hook with mock behavior
+  useSocket.js              # Socket.IO hook for backend communication
 
 /lib
-  apiClient.js              # Mock-first API client
+  apiClient.js              # HTTP API client for backend communication
 
 /app
   /login                    # Authentication pages
@@ -114,50 +104,31 @@ The app includes pre-configured demo data:
 
 ### API Client Structure
 
-The `apiClient.js` follows a mock-first approach:
+The `apiClient.js` provides HTTP communication with the backend:
 
-- All methods return realistic mock data with simulated latency
-- Each method includes commented fetch templates for real API integration
-- Easy environment-based switching between mock and real endpoints
+- RESTful API methods for all operations
+- JWT token authentication
+- Centralized error handling
+- Environment-based API URL configuration
 
-## Switching to Real APIs
+## Backend Integration
 
-### 1. Update Environment Variables
+### API Configuration
+
+Set your backend API URL in environment variables:
 
 ```bash
 NEXT_PUBLIC_API_BASE_URL=https://your-api-domain.com
 NEXT_PUBLIC_WS_URL=wss://your-websocket-domain.com
 ```
 
-### 2. Uncomment Real API Calls
+### Socket.IO Configuration
 
-In `lib/apiClient.js`, uncomment the fetch blocks and comment out mock implementations:
+The frontend connects to the backend Socket.IO server with:
 
-```javascript
-// Example: Login method
-async login(email, password) {
-  // Uncomment this for real API:
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
-  });
-  return response.json();
-
-  // Comment out mock implementation:
-  // return mockLoginResponse();
-}
-```
-
-### 3. Update Socket Configuration
-
-In `hooks/useSocket.js`, replace the mock socket with real Socket.IO:
-
-```javascript
-const realSocket = io(process.env.NEXT_PUBLIC_WS_URL, {
-  auth: { token },
-});
-```
+- JWT token authentication
+- Auto-reconnection on connection loss
+- Event handling for order updates and notifications
 
 ## API Contract
 
@@ -184,17 +155,12 @@ The frontend expects these endpoints:
 
 ### WebSocket Events
 
-- `order.status.updated` - Status change notifications
-- `driver.assigned` - New order assignments
-- `order.assigned` - Route assignments
+- `order:status:updated` - Status change notifications
+- `order:assigned` - New order assignments to drivers
+- `driver:assigned` - Driver assignment notifications
+- `connected` - Connection confirmation with user details
 
 ## Development Features
-
-### Mock Data Controls
-
-- **Status Simulation**: Dev-only button to advance order status
-- **Assignment Simulation**: Driver dashboard includes mock assignment button
-- **Socket Event Simulation**: Manual event triggering for testing
 
 ### Design System
 
@@ -221,11 +187,11 @@ npm run build && npm run export
 ## Contributing
 
 1. Follow the existing code structure and naming conventions
-2. Maintain the mock-first approach for new API integrations
-3. Ensure responsive design across all new components
-4. Add appropriate loading states and error handling
-5. Test both Client and Driver workflows
+2. Ensure responsive design across all new components
+3. Add appropriate loading states and error handling
+4. Validate both Client and Driver workflows
+5. Maintain proper error handling for API failures
 
 ## License
 
-This is a demo application for showcasing logistics platform capabilities.
+This is an application for showcasing logistics platform capabilities.

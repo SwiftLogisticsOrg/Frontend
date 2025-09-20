@@ -121,18 +121,6 @@ export default function HomePage() {
               </p>
             </div>
           </div>
-
-          {/* Demo Note */}
-          <div className="mt-16 p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-lg max-w-2xl mx-auto">
-            <h3 className="text-lg font-semibold text-yellow-400 mb-2">
-              Demo Application
-            </h3>
-            <p className="text-gray-300 text-sm">
-              This is a demonstration of SwiftTrack's microservices logistics
-              platform. Create an account as either a Client or Driver to
-              explore the full functionality.
-            </p>
-          </div>
         </div>
       </main>
     </div>
