@@ -155,7 +155,7 @@ export default function ItemSelectionPage() {
                 <span className="font-medium text-black">{getTotalItems()} items</span>
               </div>
               <div className="text-lg font-bold text-black">
-                ${getTotalPrice().toFixed(2)}
+                LKR {getTotalPrice().toFixed(2)}
               </div>
               <button
                 onClick={proceedToOrderForm}
@@ -232,7 +232,7 @@ export default function ItemSelectionPage() {
                           {item.price > 0 && (
                             <>
                               <span>•</span>
-                              <span className="font-medium text-green-600">${item.price}</span>
+                              <span className="font-medium text-green-600">LKR {item.price}</span>
                             </>
                           )}
                         </div>
@@ -279,7 +279,7 @@ export default function ItemSelectionPage() {
             className="w-full bg-black text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2"
           >
             <ShoppingCart className="h-5 w-5" />
-            <span>{getTotalItems()} items • ${getTotalPrice().toFixed(2)}</span>
+            <span>{getTotalItems()} items • LKR {getTotalPrice().toFixed(2)}</span>
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>

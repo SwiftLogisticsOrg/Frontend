@@ -14,14 +14,14 @@ const statusColors = {
 };
 
 const statusLabels = {
-  created: 'Created',
-  assigned: 'Assigned',
-  accepted: 'Accepted',
-  on_way: 'On The Way',
-  arrived_pickup: 'Arrived at Pickup',
-  picked_up: 'Picked Up',
-  arrived_delivery: 'Arrived at Delivery',
-  delivered: 'Delivered'
+  created: '📋 Created',
+  assigned: '👤 Assigned',
+  accepted: '✅ Accepted',
+  on_way: '🚛 On The Way',
+  arrived_pickup: '📍 Arrived at Pickup',
+  picked_up: '📦 Picked Up',
+  arrived_delivery: '🏠 Arrived at Delivery',
+  delivered: '🎉 Delivered'
 };
 
 export default function DriverOrderCard({ order }) {

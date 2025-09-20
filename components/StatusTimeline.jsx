@@ -2,14 +2,14 @@
 import { CheckCircle, Circle, Clock, Truck, MapPin, Package } from 'lucide-react';
 
 const statusSteps = [
-  { key: 'created', label: 'Order Created', icon: Package },
-  { key: 'assigned', label: 'Driver Assigned', icon: Truck },
-  { key: 'accepted', label: 'Order Accepted', icon: CheckCircle },
-  { key: 'on_way', label: 'On The Way', icon: Truck },
-  { key: 'arrived_pickup', label: 'Arrived at Pickup', icon: MapPin },
-  { key: 'picked_up', label: 'Picked Up', icon: Package },
-  { key: 'arrived_delivery', label: 'Arrived at Delivery', icon: MapPin },
-  { key: 'delivered', label: 'Delivered', icon: CheckCircle }
+  { key: 'created', label: '📋 Order Created', icon: Package },
+  { key: 'assigned', label: '👤 Driver Assigned', icon: Truck },
+  { key: 'accepted', label: '✅ Order Accepted', icon: CheckCircle },
+  { key: 'on_way', label: '🚛 On The Way', icon: Truck },
+  { key: 'arrived_pickup', label: '📍 Arrived at Pickup', icon: MapPin },
+  { key: 'picked_up', label: '📦 Picked Up', icon: Package },
+  { key: 'arrived_delivery', label: '🏠 Arrived at Delivery', icon: MapPin },
+  { key: 'delivered', label: '🎉 Delivered', icon: CheckCircle }
 ];
 
 export default function StatusTimeline({ currentStatus, updatedAt }) {

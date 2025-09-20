@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default markers in react-leaflet
@@ -49,8 +49,17 @@ export default function OrderMap({ order }) {
         [order?.deliveryCoordinates]
     );
 
-    // Use the first available coordinates as center, or default fallback
-    const mapCenter = pickupCoords || deliveryCoords || [40.7589, -73.9851];
+    // Calculate center point between pickup and delivery coordinates
+    const mapCenter = useMemo(() => {
+        if (pickupCoords && deliveryCoords) {
+            // Calculate the midpoint between pickup and delivery
+            const centerLat = (pickupCoords[0] + deliveryCoords[0]) / 2;
+            const centerLng = (pickupCoords[1] + deliveryCoords[1]) / 2;
+            return [centerLat, centerLng];
+        }
+        // Use the available coordinate if only one is present, or default fallback
+        return pickupCoords || deliveryCoords || [40.7589, -73.9851];
+    }, [pickupCoords, deliveryCoords]);
 
     useEffect(() => {
         setMounted(true);
@@ -127,14 +136,14 @@ export default function OrderMap({ order }) {
             )}
             
             {/* Legend */}
-            <div className="absolute bottom-2 left-2 z-10 bg-white/90 backdrop-blur-sm px-2 py-1 rounded shadow-sm text-xs">
-                <div className="flex items-center gap-1 mb-1">
+            <div className="absolute bottom-2 left-2 z-10 bg-white/90 backdrop-blur-sm px-3 py-2 rounded shadow-sm text-xs">
+                <div className="flex items-center gap-2 mb-1">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span>Pickup</span>
+                    <span className="font-medium">PICKUP</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span>Delivery</span>
+                    <span className="font-medium">DELIVERY</span>
                 </div>
             </div>
             
@@ -152,26 +161,22 @@ export default function OrderMap({ order }) {
                 {/* Pickup Marker */}
                 {pickupCoords && (
                     <Marker position={pickupCoords} icon={pickupIcon}>
-                        <Popup>
-                            <div className="text-sm">
-                                <strong>📦 Pickup Location</strong>
-                                <br />
-                                {order?.pickupAddress || 'Pickup Address'}
+                        <Tooltip permanent direction="top" offset={[0, -30]} className="pickup-tooltip">
+                            <div className="text-xs font-bold text-green-700">
+                                Pick up here
                             </div>
-                        </Popup>
+                        </Tooltip>
                     </Marker>
                 )}
 
                 {/* Delivery Marker */}
                 {deliveryCoords && (
                     <Marker position={deliveryCoords} icon={deliveryIcon}>
-                        <Popup>
-                            <div className="text-sm">
-                                <strong>🏠 Delivery Location</strong>
-                                <br />
-                                {order?.deliveryAddress?.street || order?.deliveryAddress || 'Delivery Address'}
+                        <Tooltip permanent direction="top" offset={[0, -30]} className="delivery-tooltip">
+                            <div className="text-xs font-bold text-red-700">
+                                Deliver here
                             </div>
-                        </Popup>
+                        </Tooltip>
                     </Marker>
                 )}
 

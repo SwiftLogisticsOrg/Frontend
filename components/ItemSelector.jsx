@@ -161,7 +161,7 @@ export default function ItemSelector({ selectedItems, onItemsChange }) {
                             {item.price > 0 && (
                               <>
                                 <span>•</span>
-                                <span>${item.price}</span>
+                                <span>LKR {item.price}</span>
                               </>
                             )}
                           </div>

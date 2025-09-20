@@ -171,7 +171,7 @@ export default function OrderForm() {
                       </span>
                     </div>
                     <div className="text-lg font-bold text-black">
-                      ${getTotalPrice().toFixed(2)}
+                      LKR {getTotalPrice().toFixed(2)}
                     </div>
                   </div>
                 </div>
@@ -196,7 +196,7 @@ export default function OrderForm() {
                         <div className="font-medium text-black">Qty: {item.quantity}</div>
                         {item.price > 0 && (
                           <div className="text-sm text-gray-500">
-                            ${item.price} each
+                            LKR {item.price} each
                           </div>
                         )}
                       </div>
